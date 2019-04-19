@@ -11,7 +11,7 @@
 function isrunning(cam::Camera)
   pbIsStreaming = Ref(bool8_t(false))
   spinCameraIsStreaming(cam, pbIsStreaming)
-  return (pbIsStreaming == 0x01)
+  return (pbIsStreaming[] == 0x01)
 end
 
 """
@@ -94,9 +94,9 @@ end
 
 
 """
-  exposure(::Camera)
+  exposure(::Camera) -> Float, String
 
-  Camera exposure mode.
+  Camera exposure time and mode.
 """
 exposure(cam::Camera) = (get(SpinFloatNode(cam, "ExposureTime")), get(SpinEnumNode(cam, "ExposureAuto")))
 
@@ -120,6 +120,30 @@ function exposure!(cam::Camera, t)
   set!(SpinFloatNode(cam, "ExposureTime"), t)
 end
 
+"""
+  exposure_range(::Camera) -> (Float, Float)
+
+  Exposure time limits in microseconds.
+"""
+exposure_limits(cam::Camera) = range(SpinFloatNode(cam, "ExposureTime"))
+
+"""
+  autoexposure_limits!(::Camera, (lower, upper)) -> (Float, Float)
+
+  Write lower and upper limits of the Auto Exposure Time (us) value.
+"""
+function autoexposure_limits!(cam::Camera, lims)
+  set!(SpinFloatNode(cam, "AutoExposureTimeLowerLimit"), lims[1])
+  set!(SpinFloatNode(cam, "AutoExposureTimeUpperLimit"), lims[2])
+  autoexposure_limits(cam)
+end
+
+"""
+  autoexposure_limits(::Camera) -> (Float, Float)
+
+  Lower and upper limits of the Auto Exposure Time (us) value.
+"""
+autoexposure_limits(cam::Camera) = (get(SpinFloatNode(cam, "AutoExposureTimeLowerLimit")), get(SpinFloatNode(cam, "AutoExposureTimeUpperLimit")))
 
 """
   framerate(::Camera) -> Float
@@ -141,3 +165,11 @@ end
 function framerate!(cam::Camera, fps)
   set!(SpinFloatNode(cam, "AcquisitionFrameRate"), fps)
 end
+
+
+"""
+  framerate_limits(::Camera) -> (Float, Float)
+
+  Framerate limits in microseconds.
+"""
+framerate_limits(cam::Camera) = range(SpinFloatNode(cam, "AcquisitionFrameRate"))

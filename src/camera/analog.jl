@@ -4,6 +4,12 @@
 # camera/analog.jl: Camera object analog features
 
 """
+  gain(::Camera) -> (Float,String)
+  Camera exposure gain number (dB) and automatic gain mode.
+"""
+gain(cam::Camera) = (get(SpinFloatNode(cam, "Gain")), get(SpinEnumNode(cam, "GainAuto")))
+
+"""
   gain!(::Camera)
 
   Set automatic exposure gain on camera.
@@ -20,6 +26,13 @@ function gain!(cam::Camera, g)
   set!(SpinEnumNode(cam, "GainAuto"), "Off")
   set!(SpinFloatNode(cam, "Gain"), g)
 end
+
+"""
+  gain_limits(::Camera) -> (Float, Float)
+
+  Camera gain limits in dB.
+"""
+gain_limits(cam::Camera) = range(SpinFloatNode(cam,"Gain"))
 
 
 """

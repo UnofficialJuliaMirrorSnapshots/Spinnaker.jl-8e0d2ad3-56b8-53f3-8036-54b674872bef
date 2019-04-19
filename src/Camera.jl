@@ -6,14 +6,15 @@ export serial, model, vendor, isrunning, start!, stop!, getimage, getimage!, sav
        triggermode, triggermode!,
        triggersource, triggersource!,
        trigger!,
-       exposure, exposure!,
-       framerate, framerate!,
-       gain!,
+       exposure, exposure!, exposure_limits,
+       autoexposure_limits, autoexposure_limits!,
+       framerate, framerate!, framerate_limits,
+       gain, gain!, gain_limits,
        adcbits, adcbits!,
        gammaenable!,
        pixelformat, pixelformat!,
        acqusitionmode, acquisitionmode!,
-       sensordims, imagedims, imagedims!, offsetdims, offsetdims!,
+       sensordims, imagedims, imagedims!, imagedims_limits, offsetdims, offsetdims!, offsetdims_limits,
        buffercount, buffercount!, buffermode, buffermode!, bufferunderrun, bufferfailed
 
 """
@@ -37,12 +38,35 @@ mutable struct Camera
     finalizer(_release!, cam)
     # Activate chunk mode
     set!(SpinBooleanNode(cam, "ChunkModeActive"), true)
-    for chunkid in ["FrameID", "ExposureTime", "Timestamp"]
-      set!(SpinEnumNode(cam, "ChunkSelector"), chunkid)
-      set!(SpinBooleanNode(cam, "ChunkEnable"), true)
-    end
+    _chunkselect(cam, ["FrameID", "FrameCounter"], "frame indentification")
+    _chunkselect(cam, ["ExposureTime"], "exposure time")
+    _chunkselect(cam, ["Timestamp"], "timestamps")
     return cam
   end
+end
+
+
+# Attempt to activate chunk data for each entry in chunknames
+# - this allows chunk names to differ on cameras
+function _chunkselect(cam::Camera, chunknames::Vector{String}, desc::String)
+
+  fail = true
+  i = 1
+  while fail == true
+    try 
+      fail = false
+      set!(SpinEnumNode(cam, "ChunkSelector"), chunknames[i])
+      set!(SpinBooleanNode(cam, "ChunkEnable"), true)
+    catch e
+      fail = true
+    end
+    i += 1
+  end
+
+  if fail
+    @warn "Unable to enable chunk data for $(desc), tried $(chunknames), metadata may be incorrect"
+  end
+
 end
 
 unsafe_convert(::Type{spinCamera}, cam::Camera) = cam.handle
@@ -83,21 +107,21 @@ include(joinpath("camera", "stream.jl"))
 
   Return camera serial number (string)
 """
-serial(cam::Camera) = GetStringNode(cam, "DeviceSerialNumber", nodemap=CameraTLDeviceNodeMap())
+serial(cam::Camera) = get(SpinStringNode(cam, "DeviceSerialNumber", CameraTLDeviceNodeMap()))
 
 """
   vendor(::Camera) -> String
 
   Return vendor name of specified camera.
 """
-vendor(cam::Camera) = GetStringNode(cam, "DeviceVendorName", nodemap=CameraTLDeviceNodeMap())
+vendor(cam::Camera) = get(SpinStringNode(cam, "DeviceVendorName", CameraTLDeviceNodeMap()))
 
 """
   model(::Camera) -> String
 
   Return model name of specified camera.
 """
-model(cam::Camera) = GetStringNode(cam, "DeviceModelName", nodemap=CameraTLDeviceNodeMap())
+model(cam::Camera) = get(SpinStringNode(cam, "DeviceModelName", CameraTLDeviceNodeMap()))
 
 """
   show(::IO, ::Camera)
